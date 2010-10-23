@@ -20,16 +20,13 @@ public class TorrentsModel extends AbstractTableModel {
 			"Downloaded", "Uploaded", "Ratio", "Down speed", "Up speed", "ETA",
 			"Label", "Peers", "Availability"};
 
-	private TorrentsModel() {
+	public TorrentsModel() {
 		this.torrents = new ArrayList<Torrent>();
-	}
-
-	private TorrentsModel(List<Torrent> torrents) {
-		this.torrents = torrents;
 	}
 
 	public void resetTorrents(List<Torrent> torrents) {
 		this.torrents = torrents;
+		fireTableDataChanged();
 	}
 
 	@Override
@@ -86,7 +83,21 @@ public class TorrentsModel extends AbstractTableModel {
 		}
 		return null;
 	}
-	
+
+	public int getColumnPreferredSize(int col) {
+		switch (col) {
+		case 0:
+			return 220;
+		case 1:
+		case 9:
+		case 10:
+		case 11:
+			return 110;
+		default:
+			return 70;
+		}
+	}
+
 	private String getRatioString(Torrent tor) {
 		long baseSize = tor.getTotalSize();
 		if (tor.getStatusCode() == TorrentStatus.Downloading) {

@@ -2,18 +2,19 @@ package org.transdroid.desktop.gui;
 
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
+import java.awt.FileDialog;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.List;
 import java.util.logging.Logger;
 
 import javax.swing.AbstractButton;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JToolBar;
 import javax.swing.UIManager;
@@ -21,17 +22,27 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import org.guicomponents.JTabbedPaneWithCloseIcons;
+import org.json.JSONException;
 import org.transdroid.daemon.DaemonSettings;
+import org.transdroid.daemon.OS;
 import org.transdroid.daemon.util.DLog;
 import org.transdroid.daemon.util.ITLogger;
+import org.transdroid.desktop.controller.AppSettings;
 import org.transdroid.desktop.gui.ConnectDialog.DialogResultListener;
 
 public class Transdroid {
 
 	public static final String DECIMAL_FORMATTER = "%.1f";
 	private static final String TAG = "Transdroid";
+	private static final String SYSTEM_OS = System.getProperty("os.name").toLowerCase();
+	private static final String FILE_SEPERATOR = File.separator;
+	private static final File DEFAULT_SETTINGS = new File(System.getProperty("user.home") + 
+			FILE_SEPERATOR + ".transdroid-desktop" + FILE_SEPERATOR + "settings.json");
 	
 	private Logger logger;
+	private AppSettings appSettings;
+	private ConnectDialog connectDialog;
+	
 	private JFrame frame;
 	private StatusBar statusBar;
 	private JTabbedPaneWithCloseIcons serverTabs;
@@ -66,9 +77,6 @@ public class Transdroid {
 	 */
 	public Transdroid() {
 		
-		// Initialize the UI
-		initialize();
-
 		// Initialize the logging
 		logger = Logger.getLogger(TAG);
 		DLog.setLogger(new ITLogger() {
@@ -82,7 +90,22 @@ public class Transdroid {
 			}
 		});
 		DLog.d(TAG, "Welcome to Transdroid Desktop");
-		
+
+		// Initialize the UI
+		initialize();
+
+		// Load default application settings
+		appSettings = new AppSettings();
+		if (DEFAULT_SETTINGS.exists()) {
+			try {
+				appSettings.loadFromFile(DEFAULT_SETTINGS);
+			} catch (FileNotFoundException e) {
+				StatusBar.e(TAG, "Cannot read the default settings file " + DEFAULT_SETTINGS);
+			} catch (JSONException e) {
+				StatusBar.e(TAG, "The default settings file " + DEFAULT_SETTINGS + " does not contain readable settings");
+			}
+		}
+
 	}
 
 	/**
@@ -90,24 +113,25 @@ public class Transdroid {
 	 */
 	private void initialize() {
 		frame = new JFrame("Transdroid Desktop");		
-		frame.setBounds(100, 100, 600, 450);
+		frame.setBounds(100, 100, 1000, 450);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(new BorderLayout(0, 0));
 		
-		JMenuBar menuBar = new JMenuBar();
+		/*JMenuBar menuBar = new JMenuBar();
 		frame.setJMenuBar(menuBar);
-		JMenu mnAbout = new JMenu("About");
+		JMenu mnAbout = new JMenu("Transdroid");
 		menuBar.add(mnAbout);
 		JMenuItem mntmSetupHelp = new JMenuItem("Setup help...");
 		mnAbout.add(mntmSetupHelp);
 		JMenuItem mntmAboutTransdroid = new JMenuItem("About Transdroid");
-		mnAbout.add(mntmAboutTransdroid);		
+		mnAbout.add(mntmAboutTransdroid);*/
 		
 		JToolBar toolBar = new JToolBar();
 		frame.getContentPane().add(toolBar, BorderLayout.NORTH);
 		JButton btnConnect = new JButton("Connect");
 		btnConnect.addActionListener(connectListener);
 		toolBar.add(btnConnect);
+		toolBar.addSeparator();
 		btnRefresh = new JButton("Refresh");
 		btnRefresh.addActionListener(refreshListener);
 		btnRefresh.setEnabled(false);
@@ -161,7 +185,11 @@ public class Transdroid {
 	private ActionListener connectListener = new ActionListener() {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			ConnectDialog.showDialog(frame, dialogConnectListener);			
+			if (connectDialog == null) {
+				connectDialog = ConnectDialog.showDialog(frame, dialogConnectListener);
+			} else {
+				connectDialog.setVisible(true);
+			}
 		}
 	};
 	
@@ -171,9 +199,35 @@ public class Transdroid {
 			// Create a new server connection and server view
 			ServerView server = new ServerView(settings);
 			serverTabs.addTab(settings.getName(), server);
-			updateToolBar();
+			//updateToolBar();
 			// Start a first refresh
 			server.refresh();
+		}
+		@Override
+		public void onSaveSettings(DaemonSettings serverSettings) {
+			try {
+				appSettings.saveServer(serverSettings);
+				appSettings.saveToFile(DEFAULT_SETTINGS);
+			} catch (IOException ex) {
+				StatusBar.e(TAG, "Cannot save settings to " + DEFAULT_SETTINGS);
+			} catch (JSONException ex) {
+				StatusBar.e(TAG, "Cannot parse the settings to save");
+			}
+		}
+		@Override
+		public void onRemoveSettings(DaemonSettings serverSettings) {
+			try {
+				appSettings.removeServer(serverSettings.getIdString());
+				appSettings.saveToFile(DEFAULT_SETTINGS);
+			} catch (IOException ex) {
+				StatusBar.e(TAG, "Cannot save settings to " + DEFAULT_SETTINGS);
+			} catch (JSONException ex) {
+				StatusBar.e(TAG, "Cannot parse the settings to save");
+			}
+		}
+		@Override
+		public List<DaemonSettings> getSavedSettings() {
+			return appSettings.getSavedServers();
 		}
 	};
 	
@@ -200,7 +254,9 @@ public class Transdroid {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			File toAdd = showFileChooserDialog();
-			getCurrentServer().loadFile(toAdd);
+			if (toAdd != null) {
+				getCurrentServer().loadFile(toAdd);
+			}
 		}
 
 	};
@@ -261,16 +317,36 @@ public class Transdroid {
 
 	private File showFileChooserDialog() {
 		File selectedFile = null;
-		// TODO: Present a FileDialog instead for Mac?s
-		if (true) {
+		if (getSystemOS() != OS.Mac) {
 			// Ask the user to select a file
 			JFileChooser chooser = new JFileChooser();
 			int returnVal = chooser.showOpenDialog(frame);
 			if (returnVal == JFileChooser.APPROVE_OPTION) {
 				selectedFile = chooser.getSelectedFile();
 			}
+		} else {
+			// Ask the user to select a file
+			FileDialog dialog = new FileDialog(frame);
+			dialog.setVisible(true);
+			if (dialog.getFile() != null) {
+				selectedFile = new File(dialog.getFile());
+			}
 		}
 		return selectedFile;
+	}
+
+	/**
+	 * Return the system OS depending on the name of the running OS
+	 * @return The operating system
+	 */
+	private OS getSystemOS() {
+		if (SYSTEM_OS.indexOf("win") >= 0) {
+			return OS.Windows;
+		} else if (SYSTEM_OS.indexOf("mac") >= 0) {
+			return OS.Mac;
+		} else {
+			return OS.Linux;
+		}
 	}
 	
 }

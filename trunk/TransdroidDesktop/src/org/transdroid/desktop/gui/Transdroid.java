@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import javax.swing.AbstractButton;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -38,6 +39,7 @@ public class Transdroid {
 	private static final String FILE_SEPERATOR = File.separator;
 	private static final File DEFAULT_SETTINGS = new File(System.getProperty("user.home") + 
 			FILE_SEPERATOR + ".transdroid-desktop" + FILE_SEPERATOR + "settings.json");
+	private static final String IMAGESDIR = "res/img/";
 	
 	private Logger logger;
 	private AppSettings appSettings;
@@ -116,6 +118,7 @@ public class Transdroid {
 		frame.setBounds(100, 100, 1000, 450);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(new BorderLayout(0, 0));
+		frame.setIconImage(new ImageIcon(IMAGESDIR + FILE_SEPERATOR + "icon-72.png").getImage());
 		
 		/*JMenuBar menuBar = new JMenuBar();
 		frame.setJMenuBar(menuBar);

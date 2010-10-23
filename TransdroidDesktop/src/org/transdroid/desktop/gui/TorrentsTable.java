@@ -1,7 +1,8 @@
 package org.transdroid.desktop.gui;
 
 import javax.swing.JTable;
-import javax.swing.ListSelectionModel;
+
+import org.transdroid.desktop.controller.TorrentsModel;
 
 public class TorrentsTable extends JTable {
 
@@ -9,14 +10,17 @@ public class TorrentsTable extends JTable {
 
 	/**
 	 * Create the table.
+	 * @param torrents 
 	 */
-	public TorrentsTable() {
+	public TorrentsTable(TorrentsModel torrents) {
+		super(torrents);
 		
 		// Initialize
-		setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		setRowSelectionAllowed(true);
+		setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		setColumnSelectionAllowed(false);
-		setCellSelectionEnabled(false);
+		for (int i = 0; i < torrents.getColumnCount(); i++) {
+			getColumnModel().getColumn(i).setPreferredWidth(torrents.getColumnPreferredSize(i));
+		}
 		
 	}
 	

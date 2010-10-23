@@ -49,7 +49,9 @@ public class ServerView extends JPanel implements IDaemonCallback {
 	public ServerView(DaemonSettings settings) {
 		this.settings = settings;
 		this.adapter = settings.getType().createAdapter(settings);
+		this.torrents = new TorrentsModel();
 		this.queue = new TaskQueue(new TaskResultAdapter(this));
+		this.queue.start();
 		
 		initialize();
 	}
@@ -60,7 +62,7 @@ public class ServerView extends JPanel implements IDaemonCallback {
 	private void initialize() {
 		setLayout(new BorderLayout(0, 0));
 		
-		table = new TorrentsTable();
+		table = new TorrentsTable(torrents);
 		table.setFillsViewportHeight(true);
 		JScrollPane torrentsScroll = new JScrollPane(table);
 		add(torrentsScroll, BorderLayout.CENTER);
@@ -79,7 +81,7 @@ public class ServerView extends JPanel implements IDaemonCallback {
 	}
 
 	public void loadFile(File file) {
-		queue.enqueue(AddByFileTask.create(adapter, file.getAbsolutePath()));
+		queue.enqueue(AddByFileTask.create(adapter, "file://" + file.getAbsolutePath()));
 		queue.enqueue(RetrieveTask.create(adapter));
 	}
 
@@ -158,22 +160,31 @@ public class ServerView extends JPanel implements IDaemonCallback {
 		switch (started.getMethod()) {
 		case AddByFile:
 			StatusBar.d(getTag(), "Uploading '" + ((AddByFileTask)started).getFile() + "' to the server");
+			break;
 		case AddByUrl:
 			StatusBar.d(getTag(), "Adding '" + ((AddByUrlTask)started).getUrl() + "' to the server");
+			break;
 		case AddByMagnetUrl:
 			StatusBar.d(getTag(), "Adding '" + ((AddByMagnetUrlTask)started).getUrl() + "' to the server");
+			break;
 		case Pause:
 			StatusBar.d(getTag(), "Pausing'" + started.getTargetTorrent().getName() + "'");
+			break;
 		case Resume:
 			StatusBar.d(getTag(), "Resuming'" + started.getTargetTorrent().getName() + "'");
+			break;
 		case Stop:
 			StatusBar.d(getTag(), "Stoppping'" + started.getTargetTorrent().getName() + "'");
+			break;
 		case Start:
 			StatusBar.d(getTag(), "Starting'" + started.getTargetTorrent().getName() + "'");
+			break;
 		case Remove:
 			StatusBar.d(getTag(), "Removing'" + started.getTargetTorrent().getName() + "'");
+			break;
 		case Retrieve:
 			StatusBar.d(getTag(), "Refreshing...");
+			break;
 		}
 	}
 
@@ -182,18 +193,25 @@ public class ServerView extends JPanel implements IDaemonCallback {
 		switch (result.getException().getType()) {
 		case MethodUnsupported:
 			StatusBar.e(getTag(), "Operation not supported by your client");
+			break;
 		case ConnectionError:
 			StatusBar.e(getTag(), "Connection error (please check your settings)");
+			break;
 		case UnexpectedResponse:
 			StatusBar.e(getTag(), "Unexpected server response");
+			break;
 		case AuthenticationFailure:
 			StatusBar.e(getTag(), "Failed to authenticate (please check your username and password)");
+			break;
 		case NotConnected:
 			StatusBar.e(getTag(), "There is no conenction to a running daemon on your server");
+			break;
 		case ParsingFailed:
 			StatusBar.e(getTag(), "Failed to parse the server response (please check your settings)");
+			break;
 		case FileAccessError:
 			StatusBar.e(getTag(), "Cannot read the .torrent file");
+			break;
 		}
 	}
 

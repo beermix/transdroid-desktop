@@ -1,7 +1,6 @@
 package org.transdroid.desktop.gui;
 
 import java.awt.BorderLayout;
-import java.awt.EventQueue;
 import java.awt.FileDialog;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -18,7 +17,6 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JToolBar;
-import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -56,23 +54,6 @@ public class Transdroid {
 	private JButton btnResume;
 	private JButton btnPause;
 	private JButton btnRemove;
-
-	/**
-	 * Launch the application.
-	 */
-	public static void main(String[] args) {
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-					Transdroid window = new Transdroid();
-					window.frame.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
-	}
 
 	/**
 	 * Create the application.
@@ -176,6 +157,10 @@ public class Transdroid {
 		statusBar = new StatusBar();
 		frame.getContentPane().add(statusBar, BorderLayout.SOUTH);
 		
+	}
+	
+	public void setVisible(boolean visible) {
+		frame.setVisible(visible);
 	}
 	
 	private ChangeListener tabListener = new ChangeListener() {		

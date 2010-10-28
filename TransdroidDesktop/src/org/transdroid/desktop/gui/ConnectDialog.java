@@ -63,7 +63,7 @@ public class ConnectDialog extends JDialog {
 			public void actionPerformed(ActionEvent e) {
 				if (server.isDataValid()) {
 					callback.onSaveSettings(getServerSettings());
-					server = new DaemonSettingsView(callback.getSavedSettings());
+					server.updateSavedServers(callback.getSavedSettings());
 				}
 			}
 		});
@@ -75,7 +75,7 @@ public class ConnectDialog extends JDialog {
 			public void actionPerformed(ActionEvent e) {
 				if (server.isSavedServer()) {
 					callback.onRemoveSettings(getServerSettings());
-					server = new DaemonSettingsView(callback.getSavedSettings());
+					server.updateSavedServers(callback.getSavedSettings());
 				}
 			}
 		});

@@ -4,9 +4,10 @@ import java.awt.BorderLayout;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 
 import org.transdroid.daemon.DaemonSettings;
@@ -25,6 +26,8 @@ import org.transdroid.daemon.task.RemoveTask;
 import org.transdroid.daemon.task.ResumeTask;
 import org.transdroid.daemon.task.RetrieveTask;
 import org.transdroid.daemon.task.RetrieveTaskSuccessResult;
+import org.transdroid.daemon.task.SetDownloadLocationTask;
+import org.transdroid.daemon.task.SetLabelTask;
 import org.transdroid.daemon.task.StartTask;
 import org.transdroid.daemon.task.StopTask;
 import org.transdroid.desktop.controller.TaskResultAdapter;
@@ -44,31 +47,36 @@ public class ServerView extends JPanel implements IDaemonCallback {
 
 	/**
 	 * Create the panel.
-	 * @param connection 
+	 * @param settings The server configuration attached to this view
+	 * @param actionPopup The popup to show with torrents actions 
 	 */
-	public ServerView(DaemonSettings settings) {
+	public ServerView(DaemonSettings settings, JPopupMenu actionPopup) {
 		this.settings = settings;
 		this.adapter = settings.getType().createAdapter(settings);
 		this.torrents = new TorrentsModel();
 		this.queue = new TaskQueue(new TaskResultAdapter(this));
 		this.queue.start();
 		
-		initialize();
+		initialize(actionPopup);
 	}
 
 	/**
 	 * Initialize the contents of the panel.
 	 */
-	private void initialize() {
+	private void initialize(JPopupMenu actionPopup) {
 		setLayout(new BorderLayout(0, 0));
 		
-		table = new TorrentsTable(torrents);
+		table = new TorrentsTable(torrents, actionPopup);
 		table.setFillsViewportHeight(true);
 		JScrollPane torrentsScroll = new JScrollPane(table);
 		add(torrentsScroll, BorderLayout.CENTER);
 		
-		JList listViews = new JList();
-		add(listViews, BorderLayout.WEST);
+		/*JList listViews = new JList();
+		add(listViews, BorderLayout.WEST);*/
+	}
+
+	public DaemonSettings getSettings() {
+		return this.settings;
 	}
 
 	private String getTag() {
@@ -133,6 +141,20 @@ public class ServerView extends JPanel implements IDaemonCallback {
 		}
 	}
 
+	public void setLabel(String newLabel) {
+		for (Torrent torrent : getSelection()) {
+			torrents.mimicNewLabel(torrent, newLabel);
+			queue.enqueue(SetLabelTask.create(adapter, torrent, newLabel));
+		}
+	}
+
+	public void setDownloadLocation(String newLocation) {
+		for (Torrent torrent : getSelection()) {
+			torrents.mimicNewDownloadLocation(torrent, newLocation);
+			queue.enqueue(SetDownloadLocationTask.create(adapter, torrent, newLocation));
+		}
+	}
+	
 	/**
 	 * Returns the list of currently selected torrents in the table
 	 * @return A list of Torrents corresponding to the selected rows
@@ -145,6 +167,14 @@ public class ServerView extends JPanel implements IDaemonCallback {
 		return selection;
 	}
 
+	/**
+	 * Returns a the known labels on the server
+	 * @return A list of label names with the number of torrents that have this label
+	 */
+	public Map<String, Integer> getExistingLabels() {
+		return torrents.getExistingLabels();
+	}
+	
 	@Override
 	public void onQueueEmpty() {
 		// Nothing to do
@@ -231,5 +261,5 @@ public class ServerView extends JPanel implements IDaemonCallback {
 		status = result.size() + " torrents running";
 		StatusBar.d(getTag(), status);
 	}
-	
+
 }

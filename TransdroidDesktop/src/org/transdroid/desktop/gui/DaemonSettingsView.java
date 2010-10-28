@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.BorderFactory;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JOptionPane;
@@ -13,6 +14,7 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
 import org.guicomponents.LabelledItemPanel;
+import org.guicomponents.ObjectListCellRenderer;
 import org.transdroid.daemon.Daemon;
 import org.transdroid.daemon.DaemonSettings;
 import org.transdroid.daemon.OS;
@@ -46,6 +48,45 @@ public class DaemonSettingsView extends LabelledItemPanel {
 		initialize((savedServers == null? new ArrayList<DaemonSettings>(): savedServers));
 	}
 
+	/**
+	 * Initialize the contents of the panel.
+	 */
+	private void initialize(List<DaemonSettings> savedServers) {
+
+        setBorder(BorderFactory.createEtchedBorder());
+
+        // Set up a combobox where the user can select a saved server's settings
+        savedServers.add(0, null);
+        savedServerBox = new JComboBox(savedServers.toArray(new DaemonSettings[] {}));
+        savedServerBox.setRenderer(new ObjectListCellRenderer() {
+			private static final long serialVersionUID = 9097598876193357699L;
+			@Override
+        	protected String getObjectText(Object value) {
+				if (value instanceof DaemonSettings) {
+					return ((DaemonSettings)value).getName();
+				} else {
+					return super.getObjectText(value);
+				}
+        	}
+        });
+        savedServerBox.addActionListener(savedServerSelected);
+        
+        addItem("Saved server", savedServerBox);
+        addItem("Name", name );
+        addItem("Server type", type);
+        addItem("Host (ip address)", host);
+        addItem("Port", port);
+        addItem("Use authentication", useAuth);
+        addItem("Username", username);
+        addItem("Password", password);
+        addItem("Folder", folder);
+        addItem("OS", os);
+        addItem("Use SSL", useSsl);
+        addItem("Custom SSL fingerprint", sslFingerprint);
+        addItem("Accept all certificates", sslAcceptAll);
+        
+	}
+
 	public void setSettings(DaemonSettings existing) {	
 		if (existing != null) {
 			name.setText(existing.getName());
@@ -63,31 +104,12 @@ public class DaemonSettingsView extends LabelledItemPanel {
 		}
 	}
 
-	/**
-	 * Initialize the contents of the panel.
-	 */
-	private void initialize(List<DaemonSettings> savedServers) {
-
-        setBorder(BorderFactory.createEtchedBorder());
+	public void updateSavedServers(List<DaemonSettings> savedServers) {
 
         // Set up a combobox where the user can select a saved server's settings
         savedServers.add(0, null);
-        savedServerBox = new JComboBox(savedServers.toArray(new DaemonSettings[] {}));
-        savedServerBox.addActionListener(savedServerSelected);
-        
-        addItem("Saved server", savedServerBox);
-        addItem("Name", name );
-        addItem("Server type", type);
-        addItem("Host (ip address)", host);
-        addItem("Port", port);
-        addItem("Use authentication", useAuth);
-        addItem("Username", username);
-        addItem("Password", password);
-        addItem("Folder", folder);
-        addItem("OS", os);
-        addItem("Use SSL", useSsl);
-        addItem("Custom SSL fingerprint", sslFingerprint);
-        addItem("Accept all certificates", sslAcceptAll);
+        savedServerBox.setModel(new DefaultComboBoxModel(
+        		savedServers.toArray(new DaemonSettings[] {})));
         
 	}
 	

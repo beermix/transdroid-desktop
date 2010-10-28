@@ -7,6 +7,7 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -15,7 +16,9 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
 import javax.swing.JToolBar;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -54,6 +57,7 @@ public class Transdroid {
 	private JButton btnResume;
 	private JButton btnPause;
 	private JButton btnRemove;
+	private JPopupMenu actionPopup;
 
 	/**
 	 * Create the application.
@@ -101,15 +105,6 @@ public class Transdroid {
 		frame.getContentPane().setLayout(new BorderLayout(0, 0));
 		frame.setIconImage(new ImageIcon(IMAGESDIR + FILE_SEPERATOR + "icon-72.png").getImage());
 		
-		/*JMenuBar menuBar = new JMenuBar();
-		frame.setJMenuBar(menuBar);
-		JMenu mnAbout = new JMenu("Transdroid");
-		menuBar.add(mnAbout);
-		JMenuItem mntmSetupHelp = new JMenuItem("Setup help...");
-		mnAbout.add(mntmSetupHelp);
-		JMenuItem mntmAboutTransdroid = new JMenuItem("About Transdroid");
-		mnAbout.add(mntmAboutTransdroid);*/
-		
 		JToolBar toolBar = new JToolBar();
 		frame.getContentPane().add(toolBar, BorderLayout.NORTH);
 		JButton btnConnect = new JButton("Connect");
@@ -117,36 +112,36 @@ public class Transdroid {
 		toolBar.add(btnConnect);
 		toolBar.addSeparator();
 		btnRefresh = new JButton("Refresh");
-		btnRefresh.addActionListener(refreshListener);
+		btnRefresh.addActionListener(refreshAction);
 		btnRefresh.setEnabled(false);
 		toolBar.add(btnRefresh);
 		btnLoadTorentFile = new JButton("Load .torrent");
-		btnLoadTorentFile.addActionListener(loadTorrentFileListener);
+		btnLoadTorentFile.addActionListener(loadTorrentFileAction);
 		btnLoadTorentFile.setEnabled(false);
 		toolBar.add(btnLoadTorentFile);
 		btnLoadUrl = new JButton("Load URL");
-		btnLoadUrl.addActionListener(loadUrlListener);
+		btnLoadUrl.addActionListener(loadUrlAction);
 		btnLoadUrl.setEnabled(false);
 		toolBar.add(btnLoadUrl);
 		toolBar.addSeparator();
 		btnStart = new JButton("Start");
-		btnStart.addActionListener(startListener);
+		btnStart.addActionListener(startAction);
 		btnStart.setEnabled(false);
 		toolBar.add(btnStart);
 		btnStop = new JButton("Stop");
-		btnStop.addActionListener(stopListener);
+		btnStop.addActionListener(stopAction);
 		btnStop.setEnabled(false);
 		toolBar.add(btnStop);
 		btnResume = new JButton("Resume");
-		btnResume.addActionListener(resumeListener);
+		btnResume.addActionListener(resumeAction);
 		btnResume.setEnabled(false);
 		toolBar.add(btnResume);
 		btnPause = new JButton("Pause");
-		btnPause.addActionListener(pauseListener);
+		btnPause.addActionListener(pauseAction);
 		btnPause.setEnabled(false);
 		toolBar.add(btnPause);
 		btnRemove = new JButton("Remove");
-		btnRemove.addActionListener(removeListener);
+		btnRemove.addActionListener(removeAction);
 		btnRemove.setEnabled(false);
 		toolBar.add(btnRemove);
 		
@@ -156,6 +151,33 @@ public class Transdroid {
 		
 		statusBar = new StatusBar();
 		frame.getContentPane().add(statusBar, BorderLayout.SOUTH);
+
+		// Popup menu for torrent right-click action
+		actionPopup = new JPopupMenu();
+		JMenuItem start = new JMenuItem("Start");
+		start.addActionListener(startAction);
+		actionPopup.add(start);
+		JMenuItem startF = new JMenuItem("Force start");
+		startF.addActionListener(startForcedAction);
+		actionPopup.add(startF);
+		JMenuItem stop = new JMenuItem("Stop");
+		stop.addActionListener(stopAction);
+		actionPopup.add(stop);
+		JMenuItem resume = new JMenuItem("Resume");
+		resume.addActionListener(resumeAction);
+		actionPopup.add(resume);
+		JMenuItem pause = new JMenuItem("Pause");
+		pause.addActionListener(pauseAction);
+		actionPopup.add(pause);
+		JMenuItem remove = new JMenuItem("Remove");
+		remove.addActionListener(removeAction);
+		actionPopup.add(remove);
+		JMenuItem setlabel = new JMenuItem("Set label...");
+		setlabel.addActionListener(setLabelAction);
+		actionPopup.add(setlabel);
+		JMenuItem move = new JMenuItem("Move...");
+		move.addActionListener(setDownloadLocationAction);
+		actionPopup.add(move);
 		
 	}
 	
@@ -185,9 +207,8 @@ public class Transdroid {
 		@Override
 		public void onSettingsCompleted(DaemonSettings settings) {
 			// Create a new server connection and server view
-			ServerView server = new ServerView(settings);
+			ServerView server = new ServerView(settings, actionPopup);
 			serverTabs.addTab(settings.getName(), server);
-			//updateToolBar();
 			// Start a first refresh
 			server.refresh();
 		}
@@ -215,7 +236,9 @@ public class Transdroid {
 		}
 		@Override
 		public List<DaemonSettings> getSavedSettings() {
-			return appSettings.getSavedServers();
+			// Returns a copy of the saved servers, so changing this list doesn't 
+			// affect the actual saved servers
+			return new ArrayList<DaemonSettings>(appSettings.getSavedServers());
 		}
 	};
 	
@@ -231,14 +254,14 @@ public class Transdroid {
 		btnRemove.setEnabled(ok);
 	}
 
-	private ActionListener refreshListener = new ActionListener() {		
+	public ActionListener refreshAction = new ActionListener() {		
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			getCurrentServer().refresh();
 		}
 	};
 	
-	private ActionListener loadTorrentFileListener = new ActionListener() {		
+	public ActionListener loadTorrentFileAction = new ActionListener() {		
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			File toAdd = showFileChooserDialog();
@@ -249,43 +272,52 @@ public class Transdroid {
 
 	};
 
-	private ActionListener loadUrlListener = new ActionListener() {		
+	public ActionListener loadUrlAction = new ActionListener() {		
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			String url = JOptionPane.showInputDialog("Enter the .torrent URL to add");
-			getCurrentServer().loadUrl(url);
+			if (url != null && !url.equals("")) {
+				getCurrentServer().loadUrl(url);
+			}
 		}
 	};
-	
-	private ActionListener startListener = new ActionListener() {		
+
+	public ActionListener startAction = new ActionListener() {		
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			getCurrentServer().start(false);
 		}
 	};
+
+	public ActionListener startForcedAction = new ActionListener() {		
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			getCurrentServer().start(true);
+		}
+	};
 	
-	private ActionListener stopListener = new ActionListener() {		
+	public ActionListener stopAction = new ActionListener() {		
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			getCurrentServer().stop();
 		}
 	}; 
 	
-	private ActionListener resumeListener = new ActionListener() {		
+	public ActionListener resumeAction = new ActionListener() {		
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			getCurrentServer().resume();
 		}
 	};
 	
-	private ActionListener pauseListener = new ActionListener() {		
+	public ActionListener pauseAction = new ActionListener() {		
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			getCurrentServer().pause();
 		}
 	};
-	
-	private ActionListener removeListener = new ActionListener() {		
+
+	public ActionListener removeAction = new ActionListener() {		
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			int result = JOptionPane.showOptionDialog(frame, 
@@ -295,6 +327,36 @@ public class Transdroid {
 					new String[] {"Yes", "Yes, with data", "No"}, null);
 			if (result == 0 || result == 1) {
 				getCurrentServer().remove(result == 1);
+			}
+		}
+	};
+
+	public ActionListener setLabelAction = new ActionListener() {		
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			// Ask the user to enter a new label or choose one from the existing labels
+			Object result = JOptionPane.showInputDialog(frame, 
+					"Enter the label to assign:", "Set label", JOptionPane.QUESTION_MESSAGE, 
+					null, getCurrentServer().getExistingLabels().keySet().toArray(), "");
+			if (result != null) {
+				getCurrentServer().setLabel((String)result);
+			}
+		}
+	};
+
+	public ActionListener setDownloadLocationAction = new ActionListener() {		
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			// Ask the user to enter a new download location
+			String result = JOptionPane.showInputDialog(frame, 
+					"Enter the new download location:", "Move torrent", JOptionPane.QUESTION_MESSAGE);
+			if (result != null && !result.equals("")) {
+				// Make sure it ends with a / or \ (whatever is appropriate)
+				String sep = getCurrentServer().getSettings().getOS().getPathSeperator();
+				if (!result.endsWith(sep)) {
+					result += sep;
+				}
+				getCurrentServer().setDownloadLocation(result);
 			}
 		}
 	};

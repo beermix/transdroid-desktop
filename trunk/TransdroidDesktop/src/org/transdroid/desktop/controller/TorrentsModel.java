@@ -1,7 +1,9 @@
 package org.transdroid.desktop.controller;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.table.AbstractTableModel;
 
@@ -16,16 +18,26 @@ public class TorrentsModel extends AbstractTableModel {
 	private static final long serialVersionUID = -7118232097555641598L;
 
 	private List<Torrent> torrents;
+	private Map<String, Integer> labels;
 	private String[] columns = new String[] {"Name", "Status", "Size", "Done",
 			"Downloaded", "Uploaded", "Ratio", "Down speed", "Up speed", "ETA",
 			"Label", "Peers", "Availability"};
 
 	public TorrentsModel() {
 		this.torrents = new ArrayList<Torrent>();
+		this.labels = new HashMap<String, Integer>();
 	}
 
 	public void resetTorrents(List<Torrent> torrents) {
 		this.torrents = torrents;
+		// Look through all torrents which labels are known on the server
+		for (Torrent torrent : this.torrents){
+			if (labels.containsKey(torrent.getLabelName())) {
+				labels.put(torrent.getLabelName(), labels.get(torrent.getLabelName()) + 1);
+			} else {
+				labels.put(torrent.getLabelName(), 1);
+			}
+		}
 		fireTableDataChanged();
 	}
 
@@ -123,6 +135,10 @@ public class TorrentsModel extends AbstractTableModel {
 		return torrents.get(row);
 	}
 
+	public Map<String, Integer> getExistingLabels() {
+		return labels;
+	}
+
 	public void mimicPauseTorrent(Torrent torrent) {
 		torrent.mimicPause();
 		fireTableDataChanged();
@@ -143,8 +159,18 @@ public class TorrentsModel extends AbstractTableModel {
 		fireTableDataChanged();
 	}
 
+	public void mimicNewLabel(Torrent torrent, String newLabel) {
+		torrent.mimicNewLabel(newLabel);
+		fireTableDataChanged();
+	}
+
 	public void mimicRemoveTorrent(Torrent remove) {
 		torrents.remove(remove);
+		fireTableDataChanged();
+	}
+
+	public void mimicNewDownloadLocation(Torrent torrent, String newLocation) {
+		torrent.mimicNewDownloadLocation(newLocation);
 		fireTableDataChanged();
 	}
 
